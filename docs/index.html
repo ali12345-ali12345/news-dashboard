@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,12 +6,13 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f2f2f2;
+      background: #121212;
+      color: #e0e0e0;
       margin: 0;
       padding: 0;
     }
     header {
-      background-color: #20232a;
+      background-color: #1e1e1e;
       color: white;
       padding: 1rem;
       text-align: center;
@@ -22,22 +22,30 @@
       max-width: 1100px;
       margin: auto;
     }
+    .clock-bar {
+      display: flex;
+      justify-content: space-around;
+      background-color: #1e1e1e;
+      padding: 0.5rem;
+      color: #90caf9;
+      font-size: 0.85rem;
+    }
     .filter-box {
       margin-bottom: 1rem;
       padding: 0.5rem;
-      background: #fff;
+      background: #1e1e1e;
       border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
     }
     .news-item {
       display: flex;
       gap: 1rem;
       margin-bottom: 1rem;
       padding: 1rem;
-      background: white;
+      background: #1e1e1e;
       border-left: 4px solid #0077cc;
       border-radius: 6px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     .news-item img {
       width: 120px;
@@ -51,6 +59,7 @@
     .news-content h3 {
       margin: 0 0 0.25rem;
       font-size: 1rem;
+      color: #bbdefb;
     }
     .news-content p {
       margin: 0.25rem 0;
@@ -64,6 +73,10 @@
       padding: 4px 8px;
       font-size: 0.75rem;
       cursor: pointer;
+      background: #263238;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
     }
     .pagination {
       text-align: center;
@@ -84,6 +97,12 @@
   <header>
     <h1>📊 Live Financial News + Translate + Filter</h1>
   </header>
+  <div class="clock-bar" id="clockBar">
+    <div>🌐 UTC: <span id="utc"></span></div>
+    <div>🇯🇵 Tokyo: <span id="tokyo"></span></div>
+    <div>🇺🇸 NY: <span id="newyork"></span></div>
+    <div>🇮🇷 Tehran: <span id="tehran"></span></div>
+  </div>
   <div class="container">
     <div class="filter-box">
       <label for="filterInput">🔍 Filter by company name:</label>
@@ -95,9 +114,7 @@
     <div class="pagination">
       <button id="loadMore" onclick="loadNextPage()">Load More</button>
     </div>
-  </div>
-
-  <script>
+  </div>  <script>
     const feedUrls = [
       "https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
       "https://api.rss2json.com/v1/api.json?rss_url=https://www.cnbc.com/id/100003114/device/rss/rss.html",
@@ -175,7 +192,22 @@
       renderItems();
     };
 
+    const updateClocks = () => {
+      const now = new Date();
+      document.getElementById("utc").textContent = now.toUTCString().slice(17, 25);
+
+      const options = { hour: "2-digit", minute: "2-digit", second: "2-digit" };
+      const newYork = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+      const tokyo = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+      const tehran = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tehran" }));
+
+      document.getElementById("newyork").textContent = newYork.toLocaleTimeString("en-US", options);
+      document.getElementById("tokyo").textContent = tokyo.toLocaleTimeString("en-US", options);
+      document.getElementById("tehran").textContent = tehran.toLocaleTimeString("en-US", options);
+    };
+
+    setInterval(updateClocks, 1000);
+    updateClocks();
     renderItems();
-  </script>
-</body>
+  </script></body>
 </html>
