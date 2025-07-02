@@ -1,114 +1,181 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Yahoo Finance News</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📈 Live Financial News Dashboard</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
       background: #f2f2f2;
       margin: 0;
       padding: 0;
     }
     header {
-      background-color: #1a1a1a;
+      background-color: #20232a;
       color: white;
       padding: 1rem;
       text-align: center;
     }
     .container {
       padding: 1rem;
-      max-width: 800px;
+      max-width: 1100px;
       margin: auto;
     }
-    .news-card {
-      background: white;
-      padding: 1rem;
+    .filter-box {
       margin-bottom: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+      padding: 0.5rem;
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    .news-card h3 {
-      margin-top: 0;
+    .news-item {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: white;
+      border-left: 4px solid #0077cc;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .news-card a {
-      color: #0077cc;
-      text-decoration: none;
+    .news-item img {
+      width: 120px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
     }
-    .news-card a:hover {
-      text-decoration: underline;
+    .news-content {
+      flex: 1;
     }
-    .date {
-      font-size: 0.9em;
-      color: #666;
+    .news-content h3 {
+      margin: 0 0 0.25rem;
+      font-size: 1rem;
     }
-    .highlight-green { background-color: #e0fbe0; }
-    .highlight-red { background-color: #fde0e0; }
-    .highlight-yellow { background-color: #fff7d1; }
+    .news-content p {
+      margin: 0.25rem 0;
+      font-size: 0.85rem;
+    }
+    .tools {
+      margin-top: 0.5rem;
+    }
+    .tools button {
+      margin-right: 0.5rem;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .pagination {
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .pagination button {
+      padding: 8px 16px;
+      cursor: pointer;
+      margin: 0 4px;
+      background-color: #0077cc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>🔴 Live Yahoo Finance News (Translated + Filtered)</h1>
-    <input type="text" id="companyFilter" placeholder="Filter by company..." oninput="filterNews()" style="margin-top: 1rem; padding: 0.5rem; width: 80%; max-width: 400px;">
+    <h1>📊 Live Financial News + Translate + Filter</h1>
   </header>
-  <div class="container" id="news"></div>  <script>
-    const feedUrl = "https://api.rss2json.com/v1/api.json?rss_url=https://finance.yahoo.com/news/rssindex";
+  <div class="container">
+    <div class="filter-box">
+      <label for="filterInput">🔍 Filter by company name:</label>
+      <input type="text" id="filterInput" placeholder="e.g. Apple, Nvidia, Palantir..." onkeyup="applyFilter()" style="width: 100%; padding: 0.5rem; margin-top: 0.25rem;">
+    </div>
+    <div id="newsContainer">
+      <p>Loading news...</p>
+    </div>
+    <div class="pagination">
+      <button id="loadMore" onclick="loadNextPage()">Load More</button>
+    </div>
+  </div>
 
-    function translateToFarsi(text) {
-      // NOTE: This is placeholder for translation - real translation requires API like Google Translate
-      return "(FA) " + text;
-    }
+  <script>
+    const feedUrls = [
+      "https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://feeds.reuters.com/reuters/businessNews",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://www.investing.com/rss/news_25.rss",
+      "https://api.rss2json.com/v1/api.json?rss_url=https://finance.yahoo.com/news/rssindex"
+    ];
 
-    function getHighlightClass(text) {
-      const lowered = text.toLowerCase();
-      if (lowered.includes("surge") || lowered.includes("gain") || lowered.includes("soar")) return "highlight-green";
-      if (lowered.includes("drop") || lowered.includes("fall") || lowered.includes("loss")) return "highlight-red";
-      if (lowered.includes("risk") || lowered.includes("volatile")) return "highlight-yellow";
-      return "";
-    }
+    const container = document.getElementById("newsContainer");
+    let allItems = [];
+    let currentPage = 1;
+    const itemsPerPage = 20;
 
-    fetch(feedUrl)
-      .then(res => res.json())
-      .then(data => {
-        const container = document.getElementById("news");
-        if (!data.items || data.items.length === 0) {
-          container.innerHTML = "<p>No recent news available.</p>";
-          return;
+    const translateToFarsi = async (text) => {
+      try {
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|fa`);
+        const data = await res.json();
+        return data.responseData.translatedText;
+      } catch {
+        return text;
+      }
+    };
+
+    const renderItems = async () => {
+      container.innerHTML = "<p>Loading...</p>";
+      allItems = [];
+
+      for (const url of feedUrls) {
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.items) continue;
+          allItems.push(...data.items);
+        } catch (err) {
+          console.error("Error loading:", err);
         }
+      }
 
-        data.items.forEach((item, index) => {
-          const card = document.createElement("div");
-          const pubDate = new Date(item.pubDate).toLocaleString();
-          const translatedTitle = translateToFarsi(item.title);
-          const translatedDesc = translateToFarsi(item.description);
-          const highlightClass = getHighlightClass(item.title + item.description);
+      container.innerHTML = "";
 
-          card.className = "news-card " + highlightClass;
-          card.setAttribute("data-company", (item.title + item.description).toLowerCase());
+      const itemsToRender = allItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+      for (const item of itemsToRender) {
+        const translated = await translateToFarsi(item.title);
+        const div = document.createElement("div");
+        div.className = "news-item";
+        div.innerHTML = `
+          <img src="${item.thumbnail || 'https://via.placeholder.com/120x80'}" alt="news" />
+          <div class="news-content">
+            <h3>${item.title}</h3>
+            <p>🕒 ${new Date(item.pubDate).toLocaleString()}</p>
+            <p>📘 <em>${translated}</em></p>
+            <p>${item.description || ''}</p>
+            <div class="tools">
+              <button onclick="navigator.clipboard.writeText('${item.link}')">📋 Copy</button>
+              <button onclick="window.open('mailto:?subject=News&body=${encodeURIComponent(item.link)}')">📧 Email</button>
+              <a href="${item.link}" target="_blank"><button>🔗 Open</button></a>
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      }
+    };
 
-          card.innerHTML = `
-            <h3><a href="${item.link}" target="_blank">${translatedTitle}</a></h3>
-            <p class="date">${pubDate}</p>
-            <p>${translatedDesc}</p>
-          `;
-          container.appendChild(card);
-        });
-      })
-      .catch(err => {
-        document.getElementById("news").innerHTML = "<p>Error loading news.</p>";
-        console.error(err);
+    const applyFilter = () => {
+      const keyword = document.getElementById("filterInput").value.toLowerCase();
+      const items = document.querySelectorAll(".news-item");
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(keyword) ? "flex" : "none";
       });
+    };
 
-    function filterNews() {
-      const filterValue = document.getElementById("companyFilter").value.toLowerCase();
-      document.querySelectorAll(".news-card").forEach(card => {
-        if (card.getAttribute("data-company").includes(filterValue)) {
-          card.style.display = "block";
-        } else {
-          card.style.display = "none";
-        }
-      });
-    }
-  </script></body>
+    const loadNextPage = () => {
+      currentPage++;
+      renderItems();
+    };
+
+    renderItems();
+  </script>
+</body>
 </html>
