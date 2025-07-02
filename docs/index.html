@@ -1,72 +1,114 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Live Financial News</title>
+  <title>Live Yahoo Finance News</title>
   <style>
     body {
       font-family: sans-serif;
-      background: #f8f9fa;
+      background: #f2f2f2;
       margin: 0;
       padding: 0;
     }
     header {
-      background-color: #212529;
+      background-color: #1a1a1a;
       color: white;
       padding: 1rem;
       text-align: center;
     }
     .container {
       padding: 1rem;
+      max-width: 800px;
+      margin: auto;
     }
     .news-card {
       background: white;
       padding: 1rem;
       margin-bottom: 1rem;
       border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
     }
     .news-card h3 {
       margin-top: 0;
     }
     .news-card a {
-      color: #007bff;
+      color: #0077cc;
       text-decoration: none;
     }
     .news-card a:hover {
       text-decoration: underline;
     }
+    .date {
+      font-size: 0.9em;
+      color: #666;
+    }
+    .highlight-green { background-color: #e0fbe0; }
+    .highlight-red { background-color: #fde0e0; }
+    .highlight-yellow { background-color: #fff7d1; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Live Financial News Dashboard</h1>
+    <h1>🔴 Live Yahoo Finance News (Translated + Filtered)</h1>
+    <input type="text" id="companyFilter" placeholder="Filter by company..." oninput="filterNews()" style="margin-top: 1rem; padding: 0.5rem; width: 80%; max-width: 400px;">
   </header>
-  <div class="container" id="news"></div>
+  <div class="container" id="news"></div>  <script>
+    const feedUrl = "https://api.rss2json.com/v1/api.json?rss_url=https://finance.yahoo.com/news/rssindex";
 
-  <script>
-    const feedURL = "https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/RSSMarketsMain.xml";
+    function translateToFarsi(text) {
+      // NOTE: This is placeholder for translation - real translation requires API like Google Translate
+      return "(FA) " + text;
+    }
 
-    fetch(feedURL)
+    function getHighlightClass(text) {
+      const lowered = text.toLowerCase();
+      if (lowered.includes("surge") || lowered.includes("gain") || lowered.includes("soar")) return "highlight-green";
+      if (lowered.includes("drop") || lowered.includes("fall") || lowered.includes("loss")) return "highlight-red";
+      if (lowered.includes("risk") || lowered.includes("volatile")) return "highlight-yellow";
+      return "";
+    }
+
+    fetch(feedUrl)
       .then(res => res.json())
       .then(data => {
         const container = document.getElementById("news");
-        data.items.forEach(item => {
+        if (!data.items || data.items.length === 0) {
+          container.innerHTML = "<p>No recent news available.</p>";
+          return;
+        }
+
+        data.items.forEach((item, index) => {
           const card = document.createElement("div");
-          card.className = "news-card";
+          const pubDate = new Date(item.pubDate).toLocaleString();
+          const translatedTitle = translateToFarsi(item.title);
+          const translatedDesc = translateToFarsi(item.description);
+          const highlightClass = getHighlightClass(item.title + item.description);
+
+          card.className = "news-card " + highlightClass;
+          card.setAttribute("data-company", (item.title + item.description).toLowerCase());
+
           card.innerHTML = `
-            <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
-            <p>${new Date(item.pubDate).toLocaleString()}</p>
-            <p>${item.description}</p>
+            <h3><a href="${item.link}" target="_blank">${translatedTitle}</a></h3>
+            <p class="date">${pubDate}</p>
+            <p>${translatedDesc}</p>
           `;
           container.appendChild(card);
         });
       })
       .catch(err => {
-        document.getElementById("news").innerText = "Error loading news.";
+        document.getElementById("news").innerHTML = "<p>Error loading news.</p>";
         console.error(err);
       });
-  </script>
-</body>
+
+    function filterNews() {
+      const filterValue = document.getElementById("companyFilter").value.toLowerCase();
+      document.querySelectorAll(".news-card").forEach(card => {
+        if (card.getAttribute("data-company").includes(filterValue)) {
+          card.style.display = "block";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+  </script></body>
 </html>
