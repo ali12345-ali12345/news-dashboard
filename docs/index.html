@@ -1,93 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Financial News Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Financial News</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
+      background: #f8f9fa;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
     }
     header {
-      background-color: #333;
-      color: #fff;
-      padding: 15px;
+      background-color: #212529;
+      color: white;
+      padding: 1rem;
       text-align: center;
     }
-    .news-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-around;
-      padding: 20px;
+    .container {
+      padding: 1rem;
     }
-    .news-item {
-      background-color: #fff;
+    .news-card {
+      background: white;
+      padding: 1rem;
+      margin-bottom: 1rem;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      margin: 10px;
-      padding: 20px;
-      width: 30%;
-      transition: transform 0.3s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .news-item:hover {
-      transform: translateY(-5px);
+    .news-card h3 {
+      margin-top: 0;
     }
-    .news-item a {
+    .news-card a {
+      color: #007bff;
       text-decoration: none;
-      color: #333;
-      font-weight: bold;
+    }
+    .news-card a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-
   <header>
-    <h1>Live Financial News</h1>
+    <h1>Live Financial News Dashboard</h1>
   </header>
-
-  <div class="news-container" id="news-container">
-    <!-- News items will be displayed here -->
-  </div>
+  <div class="container" id="news"></div>
 
   <script>
-    // Function to fetch and display news
-    async function fetchNews() {
-      const rssUrls = [
-        "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
-        "https://www.cnbc.com/id/100003114/device/rss/rss.html"
-      ];
+    const feedURL = "https://api.rss2json.com/v1/api.json?rss_url=https://feeds.a.dj.com/rss/RSSMarketsMain.xml";
 
-      for (const url of rssUrls) {
-        const response = await fetch(url);
-        const data = await response.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(data, "application/xml");
-        const items = xmlDoc.getElementsByTagName("item");
-
-        for (let i = 0; i < Math.min(10, items.length); i++) {
-          const item = items[i];
-          const title = item.getElementsByTagName("title")[0].textContent;
-          const link = item.getElementsByTagName("link")[0].textContent;
-          const pubDate = item.getElementsByTagName("pubDate")[0].textContent;
-
-          const newsItem = document.createElement("div");
-          newsItem.classList.add("news-item");
-          newsItem.innerHTML = `
-            <h2><a href="${link}" target="_blank">${title}</a></h2>
-            <p><strong>Date:</strong> ${pubDate}</p>
-            <a href="${link}" target="_blank">Read more...</a>
+    fetch(feedURL)
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById("news");
+        data.items.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "news-card";
+          card.innerHTML = `
+            <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
+            <p>${new Date(item.pubDate).toLocaleString()}</p>
+            <p>${item.description}</p>
           `;
-          document.getElementById("news-container").appendChild(newsItem);
-        }
-      }
-    }
-
-    // Load news on page load
-    window.onload = fetchNews;
+          container.appendChild(card);
+        });
+      })
+      .catch(err => {
+        document.getElementById("news").innerText = "Error loading news.";
+        console.error(err);
+      });
   </script>
-
 </body>
 </html>
